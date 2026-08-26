@@ -1,0 +1,41 @@
+# sending-stones station configuration — copy to config.yaml and edit per station.
+# One golden image everywhere; this file is the only per-station difference.
+
+station_id: HRV          # FB | RFV | HRV | CHILL | TBD | SPARE
+slot: 2                  # 0-4; station transmits in seconds [12*slot, 12*slot+12) of each minute
+slot_width_s: 12
+minute_period_s: 60
+
+cohorts:
+  A:
+    preset: LongFast
+    serial: /dev/serial/by-id/CHANGE_ME_A   # stable by-id paths, not ttyUSBn (enumeration order lies)
+  B:
+    preset: ShortTurbo
+    serial: /dev/serial/by-id/CHANGE_ME_B
+
+tx_enabled: true          # all stations transmit in Rev B; set false to run RX-only
+jitter_max_s: 3.0         # uniform jitter within slot; breaks phase-lock with ambient beacons
+
+payload:
+  short_len: 20
+  long_len: 180           # alternate by seq parity
+
+capture_trials:           # H5 — scheduled deliberate collisions, rotating pairs
+  enabled: true
+  roster: [FB, RFV, HRV, CHILL, TBD]   # all stations; MUST be identical in every station's config
+  every_min: 10           # a trial fires when epoch_minute % every_min == 0
+  cohort_alternate: true  # cohort A/B alternates by global trial index
+  # Pair selection is derived from the clock alone — no coordination traffic:
+  #   trial_index = epoch_minute // every_min
+  #   pair = sorted-combinations(roster)[trial_index % C(n,2)]
+  # Full rotation of all 10 pairs every 100 min (~14 rotations/con-day).
+  threeway:               # stretch goal: threshold-vs-interference-sum probing
+    enabled: false        # default OFF until pairwise curve looks healthy (Phase 2)
+    every_nth_trial: 7    # when enabled, every 7th trial uses a triple instead
+
+census_period_s: 600
+util_period_s: 60
+
+db_path: /data/mesh_pdr_{station_id}.sqlite
+log_level: INFO
