@@ -1,7 +1,7 @@
 # sending-stones station configuration — copy to config.yaml and edit per station.
 # One golden image everywhere; this file is the only per-station difference.
 
-station_id: HRV          # FB | RFV | HRV | CHILL | TBD | SPARE
+station_id: HRV          # FB | RFV | HRV | CHILL | COLD | SPARE
 slot: 2                  # 0-4; station transmits in seconds [12*slot, 12*slot+12) of each minute
 slot_width_s: 12
 minute_period_s: 60

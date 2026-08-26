@@ -20,4 +20,4 @@ with a known denominator.
 
 Stations: Stone-FB Stone-RFV Stone-HRV Stone-CHILL Stone-COLD Stone of Reserve (spare)
 
-License: GPL-3 
+License: GPL-3.0 

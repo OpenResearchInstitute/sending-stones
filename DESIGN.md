@@ -13,7 +13,7 @@ By Open Research Institute https://openresearch.institute
 
 **Station** This is the physical unit. One Pi 4 host, two Heltec V3 nodes (one per cohort), UPS-buffered AC power, matched antennas, one SQLite database. *All five stations are hardware-identical.* Role (whether/when a station transmits) is configuration, not hardware.
 
-**Slot** Each station owns a fixed 12-second slot within every minute. Station k transmits at seconds [12k, 12k+12)). Slots guarantee our probes never overlap each other *by construction* except when we schedule them to do so, because reasons. (see Capture Trial).
+**Slot** Each station owns a fixed 12-second slot within every minute. Station k transmits at seconds [12k, 12k+12]. Slots guarantee our probes never overlap each other *by construction* except when we schedule them to do so, because reasons. (see Capture Trial).
 
 **Probe** This is a packet we originate, identity is known before transmission. The packet communicates cohort, origin station, sequence number, and TX epoch. The set of all probes is the denominator. Probes transmit at slot start + U(0,3) seconds jitter. This jitter breaks any phase-lock with the population's periodic beacons. We do this because nodeinfo/position/telemetry fire on fixed intervals, and we want to avoid this. Slot boundaries keep probes from colliding with each other.
 
@@ -34,7 +34,7 @@ By Open Research Institute https://openresearch.institute
 ## 2. Hypotheses
 
 - **H1 (congestion regime):** PDR degrades as measured channel utilization rises and we should see a knee in the 25–50% region.
-- **H2 (preset comparison):** Under matched offered load and matched apertures, ShortTurbo sustains higher PDR than LongFast in the dense regime.
+- **H2 (preset comparison):** Under matched offered load and matched apertures, ShortTurbo sustains higher PDR than LongFast in the dense regime, or does not.
 - **H3 (aperture bias):** LongFast probes are received over longer paths than ShortTurbo probes. This quantifies how much single-point received-counts overstate LongFast.
 - **H4 (multi-hop dies first):** PDR for hops ≥ 1 degrades faster with utilization than hops = 0. The capture-effect prediction is that relayed weak traffic starves out first.
 - **H5 (capture effect, direct):** In scheduled simultaneous transmissions, decode outcome at each listener is predicted by RSSI delta. We can estimate the capture threshold (dB) per preset in-venue.
@@ -68,7 +68,7 @@ Spare kit = slot 5, dormant; inherits a dead station's slot without schedule dis
 - Global minute cycle; station k transmits in its slot each minute, per cohort. Aggregate offered load: ~1 probe/min/cohort **per station**, 5/min/cohort network-wide, held constant regardless of station count by slot design. Airtime share verified post hoc against logged utilization (thermometer, not heat source).
 - Payloads alternate short (~20 B) / long (~180 B) by seq parity. This means collision cross-section scales with airtime.
 - Broadcast text (exercises flood routing). Optional low-rate DM probes for protocol-ACK cross-check.
-- **Capture trials:** at minutes where `epoch_min % 10 == 0`, two designated partner stations (for example, HRV + CHILL) transmit at slot-second 0 exactly, no jitter, same cohort, flagged `C` in payload and TX log.
+- **Capture trials:** at minutes where epoch_min % 10 == 0, a rotating pair of stations transmits at second 0 exactly, no jitter, same cohort, flagged C. The pair is derived from the clock and the shared station roster. Every station computes the schedule independently, so no coordination traffic rides the channel under test. All 10 pairs cycle every 100 minutes. The other three stations listen.
 - Duration: Thu 10:00 to Sun 14:00, continuous.
 
 ### 3.4 Timing
@@ -169,7 +169,7 @@ Schema additions vs. Rev A: `tx_log.is_capture`, `rx_log.is_capture`, slot table
 
 Probe payload: `PDR|<cohort>|<station>|<seq>|<epoch>|<N/C>` padded to target length. Announced on con channels (etiquette + free decode documentation).
 
-There could be Easter Eggs or a CTF in the probes if we want.
+There could be Easter Eggs or a CTF in the probes if we want. If this is done, egg content must live after the flag. It can be in the padding field or additional pipe-delimited fields. Do not put it inside the first six.
 
 ---
 
