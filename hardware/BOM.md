@@ -16,7 +16,7 @@ custom radio firmware).
 |---|---|---|---|
 | 7 | Raspberry Pi 4 Model B, 2 GB | CanaKit / PiShop / Adafruit | 6 kits + 1 bench. Four native USB-A ports, both radios direct, no hub. Ethernet for NTP/remote at Stone-FB. |
 | 7 | Official Pi 4 USB-C PSU, 5.1 V/3 A | same | One SKU x 7. Underpowered adapters cause brownouts that masquerade as software bugs. |
-| 6 | Pi-4-class UPS HAT (Geekworm X728-class or Waveshare equiv.) + specified 18650 cells | Amazon / vendor direct | Target: bridge blips and brief outages (hours, not days). Must pass plug-yank test. I2C battery telemetry written to events table where supported. |
+| 6 | **Geekworm X728** + 2× 18650 (2500 mAh class), field-proven ~1 hr on Pi 4 + two USB dongles (WWWD 2022 testing) | Amazon / vendor direct | Target: bridge blips and brief outages (hours, not days). Must pass plug-yank test. I2C battery telemetry written to events table where supported. |
 | 8 | High-endurance 32 GB microSD (SanDisk High Endurance / Samsung PRO Endurance) | Amazon / B&H | 6 + 2 spares + imaging reader. Endurance rating matters more than capacity for logging. |
 
 ## RF
