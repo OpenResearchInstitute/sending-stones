@@ -4,7 +4,7 @@
 
 By Open Research Institute https://openresearch.institute
 
-**Status:** Rev B — identical stations, all-TX round-robin, capture-effect trials added
+**Status:** Rev B is identical stations, all-TX round-robin, capture-effect trials added
 **Motivation:** A LongFast vs. ShortTurbo debate at DEF CON 34 was argued from received-message counts observed at single points. This is a quantity confounded by population size, receiver aperture, and survivorship. No stage of any monitoring pipeline is known to have written to disk (will update this document if received). This design specifies the minimal sufficient instrument to measure packet delivery ratio (PDR) directly, at packet layer, with a known denominator.
 
 ---
