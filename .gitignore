@@ -5,3 +5,29 @@ __pycache__/
 *.sqlite-shm
 config.yaml
 data/raw/
+storm_nodes.py
+
+# ---- Contributed datasets: NEVER republish ----
+data/dc34/Captures/
+**/Captures/
+*.db
+*.db-wal
+*.db-shm
+*.tar
+*.tar.gz
+*.tgz
+*.gz
+*.zip
+*.csv
+*.pcap
+sahara/
+
+# ---- Local identifier files ----
+storm_ids.py
+
+# ---- runtime / cruft ----
+*.log
+.ipynb_checkpoints/
+**/.ipynb_checkpoints/
+.DS_Store
+**/.DS_Store

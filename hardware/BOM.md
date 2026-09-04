@@ -37,12 +37,12 @@ Gaffer tape, velcro, zip ties, label maker (label every Stone, radio, SD, PSU
 (Printables has V3 cases to remix), spare fuses for optimism. Go team optimism!
 
 ## Intake checklist (receiving = Phase 0 step 1)
-- [ ] Every Heltec: confirm US915 silkscreen/label; flash stock firmware; label A/B + Stone ID
+- [x] Every Heltec: confirm US915 silkscreen/label; flash stock firmware; label A/B + Stone ID
 - [ ] Every antenna: ANT-916-CW-HW-SMA marking check (NOT the RP-SMA sibling); thread onto an SMA-female pigtail
-- [ ] Every pigtail: seat IPEX once, mount bulkhead, mark radio as antenna-committed
-- [ ] Every Pi: boot golden image; both radios enumerate under /dev/serial/by-id/ with stable names
+- [x] Every pigtail: seat IPEX once, mount bulkhead, mark radio as antenna-committed
+- [x] Every Pi: boot golden image; both radios enumerate under /dev/serial/by-id/ with stable names
 - [ ] Every UPS HAT: plug-yank test under live logging — any reboot = fail/return
-- [ ] Every PSU: check for undervoltage warnings in dmesg under full station load
+- [x] Every PSU: check for undervoltage warnings in dmesg under full station load
 - [ ] Bench mules set aside and never packed for Vegas
 
-Estimated total: ~$1,000–1,100 all-in with bench devices and field kit. Final BOM cost will be here after everything works. 
+Estimated total: ~$1500 all-in with bench devices and field kit. Final BOM cost will be here and larger after everything works. 
