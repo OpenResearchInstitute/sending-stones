@@ -49,9 +49,19 @@ class Monitor:
         self.conn = db.open_db(cfg["db_path"].format(station_id=self.station))
         self.ifaces = {}   # cohort -> interface
         self.by_dev = {}   # devPath -> cohort
+        self.live = False  # gate: True only after connection.established
+
+    def on_established(self, interface, topic=pub.AUTO_TOPIC):
+        self.live = True
+        with LOCK:
+            db.log_event(self.conn, HOST, "note", "connection established; live logging on")
 
     # ---- packet path -----------------------------------------------------
     def on_receive(self, packet, interface):
+        if not self.live:
+            return                 # drop NodeDB replay during connect
+        # (optional 2nd guard: require real RF metadata)
+        # if packet.get("rxRssi") is None and packet.get("rxSnr") is None: return
         print(f"RX from={packet.get('fromId')} port={packet.get('decoded',{}).get('portnum','ENC')}", flush=True)
         cohort = self.by_dev.get(getattr(interface, "devPath", None), "?")
         d = packet.get("decoded", {}) or {}
@@ -145,6 +155,7 @@ class Monitor:
         if msi is None:
             raise RuntimeError("meshtastic package not installed")
         pub.subscribe(self.on_receive, "meshtastic.receive")
+        pub.subscribe(self.on_established, "meshtastic.connection.established")
         # meshtastic pubsub also emits connection-lost:
         pub.subscribe(self.on_lost, "meshtastic.connection.lost")
 
@@ -162,6 +173,7 @@ class Monitor:
 
 
     def on_lost(self, interface):
+        self.live = False
         dev = getattr(interface, "devPath", "?")
         cohort = self.by_dev.get(dev, "?")
         with LOCK:
