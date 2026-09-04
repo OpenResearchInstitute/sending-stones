@@ -69,9 +69,15 @@ class Monitor:
         payload = d.get("payload")
         plen = len(text) if text else (len(payload) if payload else None)
 
+        # from_id: prefer the library's !hex string; fall back to building it
+        # from the integer 'from' (present even when fromId is absent — ~15% of
+        # relayed packets omit the string form).
+        fnum = packet.get("from")
+        from_id = packet.get("fromId") or (f"!{fnum:08x}" if fnum is not None else None)
+
         row = (
             self.station, cohort, time.time(),
-            packet.get("fromId"), packet.get("toId"), str(port),
+            from_id, packet.get("toId"), str(port),
             1 if probe else 0,
             1 if (probe and probe[2]) else 0,
             probe[0] if probe else None,
@@ -148,13 +154,17 @@ class Monitor:
                 self.utilization(); t_util = now
             time.sleep(1)
 
+
     def on_lost(self, interface):
         dev = getattr(interface, "devPath", "?")
         cohort = self.by_dev.get(dev, "?")
         with LOCK:
             db.log_event(self.conn, HOST, "serial_gap", f"{cohort} {dev} lost; reconnecting")
+        try:
+            interface.close()          # release old interface before reopening
+        except Exception:
+            pass
         threading.Thread(target=self.connect, args=(cohort, dev), daemon=True).start()
-
 
 def main():
     ap = argparse.ArgumentParser()
