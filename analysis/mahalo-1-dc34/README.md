@@ -6,7 +6,7 @@ Notebook 1
 
 Sending Stones project
 
-Open Research Institute*
+Open Research Institute
 
 **Abstract.** Five privately-shared captures of the DEF CON 34 Meshtastic mesh, an
 app-level datalog, a duplicates-preserving device-trace database at a high-elevation
