@@ -71,10 +71,10 @@ CREATE TABLE IF NOT EXISTS events (
 
 def open_db(path: str) -> sqlite3.Connection:
     Path(path).parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(path, timeout=10.0, isolation_level=None)  # autocommit
+    conn = sqlite3.connect(path, timeout=10.0, isolation_level=None,
+                           check_same_thread=False)  # autocommit; thread-safe via LOCK
     conn.executescript(SCHEMA)
     return conn
-
 
 def log_event(conn, host: str, kind: str, detail: str = "") -> None:
     conn.execute(
