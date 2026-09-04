@@ -52,6 +52,7 @@ class Monitor:
 
     # ---- packet path -----------------------------------------------------
     def on_receive(self, packet, interface):
+        print(f"RX from={packet.get('fromId')} port={packet.get('decoded',{}).get('portnum','ENC')}", flush=True)
         cohort = self.by_dev.get(getattr(interface, "devPath", None), "?")
         d = packet.get("decoded", {}) or {}
         port = d.get("portnum", "?")
@@ -87,10 +88,15 @@ class Monitor:
             packet.get("rxSnr"),
             hops,
         )
-        with LOCK:
-            self.conn.execute(
-                "INSERT INTO rx_log VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)", row
-            )
+
+        try:
+            with LOCK:
+                self.conn.execute(
+                    "INSERT INTO rx_log VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)", row
+                )
+        except Exception as e:
+            print(f"INSERT FAILED for {packet.get('fromId')}: {e}", flush=True)
+
 
     # ---- periodic tasks --------------------------------------------------
     def census(self):
