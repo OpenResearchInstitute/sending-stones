@@ -293,3 +293,15 @@ software from home!
 - **Possibly avoid full-erase** flash the Heltec with the instructions from the
   event because there might be bugs or weirdness. Ask around and research before
   just doing the usual standard firmware updates. 
+
+
+## Useful sqlite commands
+
+### how many distinct nodes so far?
+sqlite3 ~/mesh_pdr_COLD.sqlite "SELECT COUNT(DISTINCT from_id) FROM rx_log WHERE from_id IS NOT NULL;"
+
+### the SNR distribution — is the mountain really hearing strong?
+sqlite3 ~/mesh_pdr_COLD.sqlite "SELECT ROUND(snr) s, COUNT(*) FROM rx_log WHERE snr IS NOT NULL GROUP BY s ORDER BY s;"
+
+### port mix — what kind of traffic
+sqlite3 ~/mesh_pdr_COLD.sqlite "SELECT portnum, COUNT(*) FROM rx_log GROUP BY portnum ORDER BY 2 DESC;"
