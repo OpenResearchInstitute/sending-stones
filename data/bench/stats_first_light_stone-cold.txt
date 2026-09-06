@@ -1,0 +1,40 @@
+(mesh) abraxas3d@stone-cold:~/Meshtastic/sending-stones/data/bench $ sqlite3 ~/mesh_pdr_COLD.sqlite "SELECT COUNT(DISTINCT from_id) FROM rx_log WHERE from_id IS NOT NULL;"
+108
+(mesh) abraxas3d@stone-cold:~/Meshtastic/sending-stones/data/bench $ sqlite3 ~/mesh_pdr_COLD.sqlite "SELECT ROUND(snr) s, COUNT(*) FROM rx_log WHERE snr IS NOT NULL GROUP BY s ORDER BY s;"
+-21.0|1
+-20.0|10
+-19.0|7
+-18.0|10
+-17.0|13
+-16.0|29
+-15.0|87
+-14.0|34
+-13.0|14
+-11.0|23
+-10.0|20
+-9.0|5
+-8.0|3
+-7.0|4
+-5.0|4
+-1.0|2
+(mesh) abraxas3d@stone-cold:~/Meshtastic/sending-stones/data/bench $ sqlite3 ~/mesh_pdr_COLD.sqlite "SELECT portnum, COUNT(*) FROM rx_log GROUP BY portnum ORDER BY 2 DESC;"
+?|139
+TELEMETRY_APP|70
+POSITION_APP|43
+NODEINFO_APP|42
+STORE_FORWARD_APP|6
+TEXT_MESSAGE_APP|3
+NODE_STATUS_APP|1
+(mesh) abraxas3d@stone-cold:~/Meshtastic/sending-stones/data/bench $
+
+
+       -21 to -16:  70 receptions   (weak, far, near decode floor)
+       -15:         87              the big peak
+       -14 to -10:  91              (strong)
+       -9 to -1:    23              (very strong, near-perfect)
+
+Claim: "A Meshtastic node's aperture is dominated by siting, not hardware."
+The same V3 and dipole that heard mostly floor-level -20 dB traffic 
+in a suburb hears a broad, strong SNR distribution peaking 5 dB 
+higher and reaching near 0 dB from a mountain overlooking the coast, 
+hearing 108 distinct nodes in half an hour. 
