@@ -201,5 +201,175 @@ ISM band, stock power, budgeted duty cycle, reported airtime share. Third-party 
 | 4. Deploy | DC35 Thu AM; daily SD swap + timesync check |
 | 5. Analyze | collate then go to notebook then go to write-up then publish|
 
+## 9. Synchronized Multi-Aperture Reception Survey
+N identical passive monitoring stations (CLIENT_MUTE, LongFast, UTC-synchronized) 
+deployed at geographically-distinct apertures across the San Diego–LA region, 
+logging concurrently. Because all stations observe the same channel over the same 
+interval, cross-aperture comparison isolates the effect of siting and geography 
+on reception. The union of receptions across stations approximates ground-truth 
+transmission activity, enabling per-aperture delivery-fraction estimates that a 
+single station cannot produce. We did this with one station and it's in mahalo-2.
+
+## 10. San Diego Field Trial, Full-Experiment Dress Rehearsal
+
+**Purpose.** Run the *complete* Sending Stones PDR experiment across San Diego–region
+apertures **before DEFCON**, configured identically to the DEFCON deployment, so that the
+first time the full system runs is at home, where a failing station is a drive away and not on
+a con floor where it will suck to fail.
+
+This is **not** a passive characterization survey (that is MAHALO-2, already done for one
+aperture). This is the real experiment setup. Stations transmit scheduled probes, receive each
+other's probes, run collision trials, and log to per-station databases that collate into a
+delivery-ratio dataset. San Diego is the rehearsal and DEFCON is the performance.
+
+---
+
+## Why a full rehearsal is necessary and what has never run
+
+Everything below is currently **unexercised** and must not debut at DEFCON (Update as we go!)
+
+- **`probe_tx.py` has never transmitted a probe that another station received.** The transmit
+  path, the payload format, the slot scheduler, validated only in isolation, never end-to-end
+  over the air to a second station.
+- **The slot-synchronized rotation has never run across stations.** The clock-derived slot
+  assignment (station k transmits in seconds [12k, 12k+12) of each minute) assumes all stations
+  share UTC and compute the same schedule independently. Never tested with >1 transmitter.
+- **The capture-trial collision machinery (H5) has never fired.** Scheduled simultaneous
+  transmission by clock-derived rotating pairs and this is pure theory until two stations 
+  actually collide on purpose and a third records it.
+- **`collate.py` has never run on real distributed multi-station data.** Cross-joining probes
+  against receptions across stations, excising self-deaf intervals, attaching the utilization
+  covariate. It has been tested on synthetic 2-station data only.
+- **Multi-station Tailscale fleet management has never been exercised.** Reaching, monitoring,
+  and pulling data from N stations concurrently. Proven for one (Palomar) and untested at fleet scale.
+
+The field trial exists to make all of these fail *here*, cheaply, before they can fail expensively.
+
+---
+
+## Station configuration is identical to DEFCON
+
+Every field-trial station is a **full experiment participant**, configured exactly as it will be
+at DEF CON:
+
+| Setting | Value | Rationale |
+|---|---|---|
+| Role | **CLIENT** (not CLIENT_MUTE) | Must transmit probes and receive; muting breaks the experiment |
+| `tx_enabled` | **true** | Stations run `probe_tx.py` and send scheduled probes |
+| Rebroadcast | **decision required - see below** | Whether probe stations also relay ambient traffic |
+| Preset (cohort A) | LongFast | Matches the deployed population |
+| Preset (cohort B) | ShortTurbo | The comparison arm (H2) needs the second radio per station |
+| Timezone | UTC | Slot synchronization depends on shared clock |
+| Time source | NTP + on-board RTC | Slot timing must not drift; RTC backs NTP across brief outages |
+| `station_id` | per station (FB/RFV/HRV/CHILL/COLD…) | Identity in probe payloads and collation |
+| `slot` | 0..N-1, unique per station | Round-robin TX schedule |
+| Tailscale | on, tested | Remote management of the whole fleet |
+| Logger | `monitor_rx.py` (validated: replay-gated, from_id, threading) | RX side |
+| Transmitter | `probe_tx.py` | TX side **first real multi-station run** |
+
+### Open decision: do probe stations also relay?
+
+- **Relay ON** stations behave as normal mesh nodes (participate in flooding). Measures PDR as
+  a *real participating node* experiences it; most realistic. Cost: your stations add relay load
+  and become part of the ambient traffic you're measuring against.
+- **Relay OFF (rebroadcast NONE), probe-TX on** stations inject only their own known probes and
+  receive everything, but do not rebroadcast others'. Cleaner isolation of the controlled signal;
+  your fleet doesn't amplify the background. Recommended for the *cleanest PDR measurement*.
+
+**Recommendation:** relay OFF for the primary PDR arm (measure delivery of a clean injected
+signal), with the option to run a relay-ON block separately to compare "participant PDR" vs
+"injected-signal PDR." Decide and record before deployment; do not leave it to per-station default.
+
+---
+
+## Radios are the gating dependency
+
+The full experiment needs **two radios per station** (cohort A LongFast + cohort B ShortTurbo)
+to run the H2 preset comparison. With ~10 radios inbound:
+
+- **5 stations × 2 radios = 10** this means the full five-station, two-cohort experiment. This is the target.
+- If fewer are usable at trial time: run **single-cohort (LongFast only)** across as many stations
+  as radios allow. A 3-station single-cohort trial still exercises probe TX/RX, slot sync, capture
+  trials, and collation (the untested machinery) even without the preset-comparison arm. Do not
+  wait for all ten to start; a reduced trial de-risks most of the system.
+
+Stone Cold (Palomar) currently holds the one flashed radio as a passive monitor. When the fleet
+radios arrive, either reflash/repurpose it into the trial or leave it as an ongoing passive
+baseline and build the trial from new radios and decide based on count.
+
+---
+
+## Sites and the aperture geometry
+
+The trial's scientific value is in *aperture diversity*, so sites should span the
+range/geography axis, not cluster. Target profile:
+
+- **Palomar Mountain** is high rural, wide aperture (proven: 568 nodes/24h). The long-range anchor.
+- **Carmel Valley** is suburban San Diego, mid aperture. The "typical deployment" point.
+- **Long Beach** is dense urban, LA basin, ~150 km north. House-hosted (reliable power/network/hands).
+  Tests whether the mesh bridges SD to LA at all, and gives a genuinely different urban aperture.
+- **1–2 more San Diego points** we need to fill in the geometry (e.g., a coastal site, a central-city site).
+  Maybe a library or school would help. 
+
+Each site needs: a willing host, AC power, and network (WiFi or ethernet). The Palomar deployment
+proved the bring-up template (power, network, Tailscale, validated code, launch), so each new
+site follows the STATION-SETUP.md checklist.
+
+**Note on the SD to LA span:** at ~150 km, Long Beach almost certainly cannot hear San Diego nodes
+directly. That distance exceeds even Palomar's reach. That is itself a *measurement*: the trial
+quantifies the geographic extent of mutual reception, and likely shows San Diego and LA as
+*distinct mesh regions* with limited or no direct bridging. Whether any node is heard by both a
+San Diego station and Long Beach is an empirical question the trial answers.
+
+---
+
+## What the trial measures (the science, beyond de-risking)
+
+1. **Per-aperture, per-preset delivery ratio (H2).** For known transmitted probes, what fraction
+   does each station receive, on LongFast vs ShortTurbo? The core PDR question, with a real
+   denominator (probes are counted at TX).
+2. **Cross-aperture reception maps.** Which stations heard each probe gives indication of coverage 
+   overlap and gaps between apertures.
+3. **Capture-effect under scheduled collisions (H5).** When two stations transmit simultaneously,
+   what does a third receive? First real data on LoRa capture in this setting.
+4. **The consensus denominator, cross-checked.** The union of receptions across stations vs. the
+   known TX ledger validates the "spatial diversity as denominator" method against ground truth
+   you actually have (because you control the transmitters).
+5. **Aperture geography.** The extent and boundaries of mutual reception across the SD to LA region.
+
+---
+
+## Success criteria for the rehearsal (de-risking checklist)
+
+The trial has done its job when all of these have happened *at least once, in San Diego*:
+
+- [ ] A probe transmitted by one station is logged as received by another (probe TX/RX round-trip).
+- [ ] All stations independently compute and transmit in the correct slot (schedule sync holds).
+- [ ] A capture trial fires: two stations transmit simultaneously, a third logs both/one/neither.
+- [ ] `collate.py` produces a delivery-ratio table from real multi-station databases.
+- [ ] The full fleet is reachable and its data pullable over Tailscale concurrently.
+- [ ] A station survives a multi-day run unattended (endurance, already shown for one; confirm for fleet).
+- [ ] At least one deliberate failure (unplug a station) is detected and recovered/logged cleanly.
+
+Every box checked in San Diego is a box that will not be checked for the first time at DEFCON.
+
+---
+
+## Sequence
+
+1. **Now (radios in transit):** secure sites (hosts, power, network); finalize the relay-on/off
+   decision; keep Palomar passive baseline running.
+2. **Radios arrive:** flash (region US, cohorts A/B per station), apply STATION-SETUP.md per box.
+3. **Deploy** to secured sites; bring each up via Tailscale; verify i2c/power/network/logger.
+4. **Bench the probe round-trip first** with two stations on one bench, confirm `probe_tx.py` gives
+   `monitor_rx.py` logs a probe, before distributing. (This is the single most important untested
+   step; do it before driving anywhere.)
+5. **Run the distributed trial** this is a synchronized, multi-day, full experiment.
+6. **Collate and analyze** goes to MAHALO-3, and a proven system for DEF CON.
+
+
 ## Appendix A: Why not IQ?
-PHY capture answers *why* packets die, at 100–1000 GB/station + SDR/DSP pipeline. Delivery ratio needs a known numerator/denominator at packet layer. The nodes provide it directly. H5 recovers the headline capture-effect result at the packet layer for free. IQ is the sequel, contingent on these results. 
+PHY capture answers *why* packets die, at 100–1000 GB/station + SDR/DSP pipeline. 
+Delivery ratio needs a known numerator/denominator at packet layer. The nodes 
+provide it directly. H5 recovers the headline capture-effect result at the packet 
+layer for free. IQ is the sequel, contingent on these results. 
