@@ -368,6 +368,9 @@ Every box checked in San Diego is a box that will not be checked for the first t
 6. **Collate and analyze** goes to MAHALO-3, and a proven system for DEF CON.
 
 
+## FINDING
+Bench, 14 September 2026: monitor_rx.py and probe_tx.py each work in isolation but CANNOT run simultaneously. Serial ports are exclusive, and each opens its own SerialInterface. Unify into a single per-station process (station.py) that opens each radio once and runs both the RX subscription and the TX scheduler against the shared interface. This is a prerequisite for any real PDR measurement. Issue was opened. 
+
 ## Appendix A: Why not IQ?
 PHY capture answers *why* packets die, at 100–1000 GB/station + SDR/DSP pipeline. 
 Delivery ratio needs a known numerator/denominator at packet layer. The nodes 
