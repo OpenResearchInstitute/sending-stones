@@ -165,6 +165,8 @@ With the Heltec attached:
 
 Use by-id paths, never /dev/ttyUSBn (enumeration order is not stable).
 
+**NOTE**: CP2102 radios commonly ship with duplicate USB serial numbers (all 0001), so /dev/serial/by-id/ collapses to one entry and cannot distinguish two radios. Use /dev/serial/by-path/ (distinct per physical USB port) instead. Caveat: by-path is stable only if radios stay in the same ports. For a robust fleet, reprogram unique CP2102 serials with cp210x-cfg. Note which physical port holds which cohort, since `--set-owner` pins identity to whatever port you used.
+
 ---
 
 ## 8. config.yaml
