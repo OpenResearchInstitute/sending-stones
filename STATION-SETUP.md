@@ -215,6 +215,46 @@ Minimal one-radio monitoring config:
     db_path: /home/abraxas3d/mesh_pdr_{station_id}.sqlite
     log_level: INFO
 
+Here is a two-radio config.yaml file:
+
+```
+station_id: FB
+slot: 0                    # FB's transmit slot; each station unique 0..N-1
+slot_width_s: 12
+minute_period_s: 60
+
+cohorts:
+  A:
+    preset: LongFast
+    serial: /dev/serial/by-path/platform-fd500000.pcie-pci-0000:01:00.0-usb-0:1.3:1.0-port0
+  B:
+    preset: ShortTurbo
+    serial: /dev/serial/by-path/platform-fd500000.pcie-pci-0000:01:00.0-usb-0:1.4:1.0-port0
+
+tx_enabled: true           # FB transmits probes (this is an experiment station, not a passive monitor)
+jitter_max_s: 3.0
+
+payload:
+  short_len: 20
+  long_len: 180
+
+capture_trials:
+  enabled: false           # keep off for the first bench bring-up; enable once round-trip works
+  roster: [FB, RFV, HRV, CHILL, COLD]
+  every_min: 10
+  cohort_alternate: false
+  threeway:
+    enabled: false
+    every_nth_trial: 7
+
+census_period_s: 600
+util_period_s: 60
+
+db_path: /home/abraxas3d/mesh_pdr_{station_id}.sqlite
+log_level: INFO
+```
+
+
 ---
 
 ## 9. Verify the code before running
