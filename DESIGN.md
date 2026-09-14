@@ -371,6 +371,19 @@ Every box checked in San Diego is a box that will not be checked for the first t
 ## FINDING
 Bench, 14 September 2026: monitor_rx.py and probe_tx.py each work in isolation but CANNOT run simultaneously. Serial ports are exclusive, and each opens its own SerialInterface. Unify into a single per-station process (station.py) that opens each radio once and runs both the RX subscription and the TX scheduler against the shared interface. This is a prerequisite for any real PDR measurement. Issue was opened. 
 
+## FINDING
+Bench, 14 September 2026: 
+
+Two environments, two questions. The field trial spans two fundamentally different RF environments, and it is important not to conflate what each can measure.
+
+San Diego (light load). The deployed San Diego population is ~99% LongFast — measured directly: a co-located dual-cohort station heard 247 distinct LongFast nodes versus 2 ShortTurbo nodes over 16 hours. This installed-base asymmetry has two consequences. First, cohort A (LongFast) participates in a real, populated network, while cohort B (ShortTurbo) is nearly alone. Its logs are dominated by the fleet's own probes because almost no ambient ShortTurbo traffic exists to receive. Second this does not give cohort B a "clean channel." Presets are modulation schemes (spreading factor, bandwidth, coding rate), not separate frequencies. LongFast and ShortTurbo share the same RF spectrum and airtime. A ShortTurbo receiver cannot decode LongFast traffic, but that traffic is still physically present and still interferes at the RF level. Cohort B is therefore deaf to, but not isolated from, the ambient LongFast population.
+
+What San Diego can measure, then, is propagation, range, and cross-aperture reception under light load. How far and how reliably probes travel between separated apertures (Palomar, Carmel Valley, Long Beach) on each preset. Plus the installed-base asymmetry itself, which is a real finding. Any naive "LongFast outperforms ShortTurbo" comparison is complicated by LongFast simply having vastly more peers. What San Diego cannot measure is congestion effects, because its channel is not really saturated if logging from a suburb. The 247 LongFast nodes are mostly distant, low-duty-cycle beacons, not a collision-inducing load.
+
+DEF CON (heavy load). The congestion question, the ALOHA/backoff regime where preset choice under a saturated channel actually matters, becomes measurable only where utilization approaches the collision knee, which requires the density of a large event. This is precisely the environment the San Diego field trial cannot replicate and DEF CON provides. There, cohort A and cohort B probes contend with a genuinely loaded channel, and the delivery difference reflects how each modulation fares under congestion (complicated yet again with the presets' inherent range/robustness differences). The two effects cannot be fully separated in the wild, since LongFast is congested by installed base and ShortTurbo is sparse by adoption.
+
+**Scope, stated plainly.** The San Diego trial de-risks the experiment machinery and characterizes propagation and population across apertures under light load. The congestion hypotheses (H1, the utilization knee; and the H2 preset comparison under load) are DEF CON measurements. Treating San Diego's light-load results as congestion evidence would be an error. Treating them as range/propagation/installed-base evidence is exactly right and is what we're going to do until we get the chance to go to a dense event. 
+
 ## Appendix A: Why not IQ?
 PHY capture answers *why* packets die, at 100–1000 GB/station + SDR/DSP pipeline. 
 Delivery ratio needs a known numerator/denominator at packet layer. The nodes 
