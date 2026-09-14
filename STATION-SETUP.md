@@ -142,6 +142,7 @@ at home or at a con. This is the "remote hands" capability the fleet depends on.
 ## 6. Clone the repo + Python venv
 
     cd ~ && mkdir -p Meshtastic && cd Meshtastic
+    sudo apt install git
     git clone https://github.com/OpenResearchInstitute/sending-stones.git
     cd sending-stones
     python3 -m venv ~/mesh
