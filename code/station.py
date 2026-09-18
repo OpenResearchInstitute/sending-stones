@@ -112,6 +112,24 @@ class Station:
         self._stop = threading.Event()
 
     # ---- RX path (runs on meshtastic reader thread via pubsub) -----------
+
+    def _resume_seq(self):
+        """FIX 1 (durability): continue seq numbering past any tx_log rows already
+        in this database, so a restart never reuses a seq from a prior run. Without
+        this, seq restarts at 1 and collides with earlier probes. Called once at
+        startup, before the TX thread begins."""
+        with LOCK:
+            for cohort in self.cfg["cohorts"]:
+                row = self.conn.execute(
+                    "SELECT MAX(seq) FROM tx_log WHERE station=? AND cohort=?",
+                    (self.station, cohort),
+                ).fetchone()
+                self.seq[cohort] = row[0] if row and row[0] is not None else 0
+        if any(self.seq.values()):
+            with LOCK:
+                db.log_event(self.conn, HOST, "note",
+                             f"resumed seq from db: {dict(self.seq)}")
+
     def on_established(self, interface, topic=pub.AUTO_TOPIC):
         self.live = True
         with LOCK:
@@ -177,12 +195,22 @@ class Station:
         self.seq[cohort] = self.seq.get(cohort, 0) + 1
         seq = self.seq[cohort]
         t_sched = time.time()
-        with LOCK:
-            self.conn.execute(
-                "INSERT OR REPLACE INTO tx_log VALUES (?,?,?,?,?,?,?,?)",
-                (self.station, cohort, seq, int(is_capture),
-                 target_len, t_sched, None, None),
-            )
+        # FIX 3 (durability): plain INSERT, not INSERT OR REPLACE. A seq collision
+        # (which _resume_seq makes impossible in normal operation) must be LOUD, not
+        # a silent clobber of a prior run's probe. If it ever happens, log it and
+        # skip this probe rather than overwrite data or crash the TX thread.
+        try:
+            with LOCK:
+                self.conn.execute(
+                    "INSERT INTO tx_log VALUES (?,?,?,?,?,?,?,?)",
+                    (self.station, cohort, seq, int(is_capture),
+                     target_len, t_sched, None, None),
+                )
+        except Exception as e:  # e.g. sqlite3.IntegrityError on PK collision
+            with LOCK:
+                db.log_event(self.conn, HOST, "note",
+                             f"tx_log collision cohort={cohort} seq={seq}: {e}; probe skipped")
+            return f"skip:collision:{type(e).__name__}"
         payload = build_payload(cohort, self.station, seq, is_capture, target_len)
         status, t_sent = "ok", None
         iface = self.ifaces.get(cohort)
@@ -299,6 +327,8 @@ class Station:
 
         for cohort, cc in self.cfg["cohorts"].items():
             self.connect(cohort, cc["serial"])
+
+        self._resume_seq()   # FIX 1: continue seq past existing tx_log rows
 
         # Start the TX scheduler thread ONLY if this station transmits.
         # tx_enabled=false => pure passive monitor (survey stations, Palomar).
