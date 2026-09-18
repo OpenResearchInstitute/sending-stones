@@ -386,6 +386,12 @@ DEF CON (heavy load). The congestion question, where ALOHA/backoff regime where 
 
 **Scope, stated plainly.** The San Diego trial de-risks the experiment machinery and characterizes propagation, range, and installed-base/spectrum-occupancy asymmetry across apertures under light load. The congestion hypotheses (H1, the utilization knee; H2, the preset comparison under load) are DEFCON measurements. Two errors we need to avoid: treating San Diego's light-load results as congestion evidence; and treating any A-vs-B difference as a clean preset-merit comparison, when it is always complicated by the cohorts' different frequencies and different populations. Treating San Diego's results as range/propagation/installed-base evidence is exactly right, and is what we will do until a dense event lets us probe congestion directly.
 
+## FINDING
+Bench, 17 September 2026 
+
+Problem resolved! (durable): station.py resumes seq from the database on restart (Fix 1) and uses a plain INSERT with loud collision logging instead of silent OR-REPLACE (Fix 3). Restarting a station mid-capture no longer wrecks tx_log data. The seq continues monotonically, and any impossible collision is logged and skipped rather than overwriting. Restart is a lot safer. The earlier "don't restart mid-capture" caveat is now gone. 
+
+
 ## Appendix A: Why not IQ?
 PHY capture answers *why* packets die, at 100–1000 GB/station + SDR/DSP pipeline. 
 Delivery ratio needs a known numerator/denominator at packet layer. The nodes 
