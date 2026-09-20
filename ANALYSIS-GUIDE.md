@@ -45,7 +45,7 @@ Before any matrix, confirm all five loggers are running and their DBs are growin
 ```bash
 for h in stone-fb stone-rfv stone-hrv stone-chill stone-spare; do
   echo "== $h =="
-  ssh $h 'pgrep -af station.py | head -1; ls -la mesh_pdr_*.sqlite*'
+  ssh abraxas3d@$h 'pgrep -af station.py | head -1; ls -la mesh_pdr_*.sqlite*'
 done
 ```
 
