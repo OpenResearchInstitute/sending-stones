@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""sending-stones unified station agent (Rev C).
+"""sending-stones unified station agent (Rev D).
 
 Replaces running monitor_rx.py and probe_tx.py as two processes — which is
 IMPOSSIBLE, because a serial port can be held by only one process, and each
@@ -21,9 +21,16 @@ connection under one LOCK. TX transmits through Monitor.ifaces[cohort] — the
 very interface the RX path is subscribed to — so there is no second open and
 no port-lock conflict.
 
-Config: unchanged from the two-script version (same keys). tx_enabled=false
-runs a pure passive monitor (no TX thread) — the correct config for survey
-stations (e.g. Palomar baseline).
+Config: unchanged from the two-script version, PLUS one new key `n_slots`
+(see Rev D note). tx_enabled=false runs a pure passive monitor (no TX thread)
+— the correct config for survey stations (e.g. Palomar baseline).
+
+Rev D: the TX slot offset is derived from `n_slots` (partition the minute)
+instead of a hardcoded `slot_width_s` that could exceed it. In Rev C,
+slot_width_s=12 * slot 5 = 60s == one whole minute, so the slot-5 station
+scheduled its probe onto the NEXT minute boundary and fired every OTHER
+minute (half offered load, invisible to PDR). slot_width_s is now vestigial
+and ignored; it may be deleted from config.yaml at leisure.
 
 Requires: pip install meshtastic pyyaml pypubsub
 """
@@ -236,16 +243,37 @@ class Station:
         c = self.cfg
         station = self.station
         slot = int(c["slot"])
-        slot_w = float(c["slot_width_s"])
         minute = float(c["minute_period_s"])
         jitter = float(c["jitter_max_s"])
+        # FIX (Rev D): the minute is a FIXED frame; slots must PARTITION it.
+        # Rev C computed the offset as slot * slot_width_s, a hardcoded width that
+        # could exceed the minute — at slot_width_s=12 the slot-5 station landed at
+        # offset 60s (the next minute boundary) and fired every OTHER minute.
+        # Deriving the gap from n_slots makes overflow impossible by construction:
+        # the gap shrinks to fit however many stations share the minute.
+        n_slots = int(c["n_slots"])
         p_short = int(c["payload"]["short_len"])
         p_long = int(c["payload"]["long_len"])
         cap = c["capture_trials"]
         cap_enabled = bool(cap["enabled"]) and station in cap["roster"]
 
+        # frame sanity — refuse to run a schedule that cannot fit the minute,
+        # so this class of bug can never again be silent.
+        if not (0 <= slot < n_slots):
+            raise ValueError(
+                f"slot {slot} out of range for n_slots={n_slots} "
+                f"(need 0 <= slot < n_slots); fix config.yaml")
+        slot_gap = (minute - jitter) / n_slots      # each station's exclusive sub-window
+        if jitter > slot_gap:
+            with LOCK:
+                db.log_event(self.conn, HOST, "note",
+                             f"WARN jitter {jitter}s > slot_gap {slot_gap:.2f}s: "
+                             "adjacent slots may bleed together")
+
         with LOCK:
-            db.log_event(self.conn, HOST, "start", f"tx scheduler station={station} slot={slot}")
+            db.log_event(self.conn, HOST, "start",
+                         f"tx scheduler station={station} slot={slot}/{n_slots} "
+                         f"gap={slot_gap:.2f}s offset={slot*slot_gap:.2f}s")
 
         while not self._stop.is_set():
             now = time.time()
@@ -263,12 +291,12 @@ class Station:
                 self.send_probe(cohort, True, p_short)
                 # Normal probe for the OTHER cohort still runs in our slot this minute:
                 other = "B" if cohort == "A" else "A"
-                t_probe = minute_start + slot * slot_w + random.uniform(0, jitter)
+                t_probe = minute_start + slot * slot_gap + random.uniform(0, jitter)
                 sleep_until(t_probe)
                 tlen = p_short if (self.seq.get(other, 0) + 1) % 2 == 0 else p_long
                 self.send_probe(other, False, tlen)
             else:
-                t_probe = minute_start + slot * slot_w + random.uniform(0, jitter)
+                t_probe = minute_start + slot * slot_gap + random.uniform(0, jitter)
                 sleep_until(t_probe)
                 for cohort in self.ifaces.keys():
                     tlen = p_short if (self.seq.get(cohort, 0) + 1) % 2 == 0 else p_long
