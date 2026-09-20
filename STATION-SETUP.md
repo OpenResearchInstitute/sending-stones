@@ -154,17 +154,58 @@ lingo. Later updates are a deliberate migration, not a surprise.
 
 ---
 
-## 7. Name the radio + set region
+## 7. Name the radios + set region AND preset (BOTH radios)
 
-With the Heltec attached:
+For a two-radio station, cohort A = LongFast (default), cohort B = ShortTurbo.
+The ShortTurbo set is a SEPARATE command and is easy to miss and a missed preset
+leaves cohort B silently running LongFast (a duplicate A radio), which corrupts
+the entire ShortTurbo dataset invisibly.
 
-    meshtastic --set-owner "Stone <Name>" --set-owner-short "<CODE>"
-    meshtastic --set lora.region US
-    ls /dev/serial/by-id/               # copy the CP2102 by-id path for the config
+Cohort A radio (ttyUSB0) — name, region, confirm LongFast:
 
-Use by-id paths, never /dev/ttyUSBn (enumeration order is not stable).
+    meshtastic --set-owner "Stone <Name> A" --set-owner-short "<CODE>A" --port /dev/ttyUSB0
+    meshtastic --set lora.region US --port /dev/ttyUSB0
+    # LongFast is the default preset; no preset set needed for A
 
-**NOTE**: CP2102 radios commonly ship with duplicate USB serial numbers (all 0001), so /dev/serial/by-id/ collapses to one entry and cannot distinguish two radios. Use /dev/serial/by-path/ (distinct per physical USB port) instead. Caveat: by-path is stable only if radios stay in the same ports. For a robust fleet, reprogram unique CP2102 serials with cp210x-cfg. Note which physical port holds which cohort, since `--set-owner` pins identity to whatever port you used.
+Cohort B radio (ttyUSB1) — name, region, AND set ShortTurbo:
+
+    meshtastic --set-owner "Stone <Name> B" --set-owner-short "<CODE>B" --port /dev/ttyUSB1
+    meshtastic --set lora.region US --port /dev/ttyUSB1
+    meshtastic --set lora.modem_preset SHORT_TURBO --port /dev/ttyUSB1   # <-- easy to miss!
+
+**MANDATORY verification! Make it Abraxas3d-proof! both radios, region AND preset:**
+
+    # region on both (must be 1 = US, not 0 = UNSET):
+    meshtastic --get lora.region --port /dev/ttyUSB0    # want: 1
+    meshtastic --get lora.region --port /dev/ttyUSB1    # want: 1
+
+    # preset/bandwidth confirms which modulation each radio is ACTUALLY on:
+    meshtastic --get lora --port /dev/ttyUSB0 | grep -E "bandwidth|spread_factor"
+    #   cohort A: want bandwidth 250, spread_factor 11  (LongFast)
+    meshtastic --get lora --port /dev/ttyUSB1 | grep -E "bandwidth|spread_factor"
+    #   cohort B: want bandwidth 500, spread_factor 7   (ShortTurbo)
+
+If cohort B shows bandwidth 250 / SF 11, the ShortTurbo set was MISSED and the
+radio is running LongFast. Re-run the modem_preset command and re-verify.
+
+## 7b. Post-setup verification gate (run on EVERY station before deploying)
+
+Three silent-misconfiguration bugs have bitten this fleet, all invisible until
+the station produces wrong/no data. Run this block on every station. 
+
+    # both radios on US band:
+    meshtastic --get lora.region --port /dev/ttyUSB0    # 1
+    meshtastic --get lora.region --port /dev/ttyUSB1    # 1
+    # A is LongFast, B is ShortTurbo:
+    meshtastic --get lora --port /dev/ttyUSB0 | grep bandwidth   # 250
+    meshtastic --get lora --port /dev/ttyUSB1 | grep bandwidth   # 500
+    # by-path serials distinct (two entries):
+    ls /dev/serial/by-path/ | grep -c usb-0                       # 2 (for two radios)
+    # config has unique station_id and slot:
+    grep -E "station_id|slot:" ~/Meshtastic/sending-stones/code/config.yaml
+
+A one-minute check here prevents an undetectable-until-analysis data disaster
+at the event.
 
 ---
 
@@ -335,6 +376,17 @@ software from home!
 - **Possibly avoid full-erase** flash the Heltec with the instructions from the
   event because there might be bugs or weirdness. Ask around and research before
   just doing the usual standard firmware updates. 
+
+- **Missed ShortTurbo preset on cohort B!** The `--set lora.modem_preset
+  SHORT_TURBO` on ttyUSB1 is a separate step from region and is easy to skip on
+  some stations. A cohort-B radio left on default LongFast is a duplicate A radio
+  mislabeled as B — it lands on the LongFast frequency, so it hears the other
+  mis-set B radios (and the real LongFast world) but NOT the correctly-set
+  ShortTurbo stations. Symptom: the cohort-B delivery matrix splits into two
+  islands (correctly-set stations vs mis-set stations), each ~1.00 internally,
+  0.00 across. Verify bandwidth 500 / SF 7 on every cohort-B radio before
+  deploying. (Found: RFV, HRV, SPARE shipped LongFast-on-B; FB, CHILL were
+  correct. Lab baseline caught it.)
 
 
 ## Useful sqlite commands
