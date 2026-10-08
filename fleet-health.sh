@@ -46,5 +46,5 @@ done
 
 echo
 echo "healthy = LOGGER active, CLOCK sync, DB_AGE small (< ~90s)."
-echo "WATCHDOG inactive is expected while the watchdog is parked."
+echo "WATCHDOG active is the armed/healthy state."
 echo "'*' on LOGGER, NOSYNC clock, or DB_AGE (!) = that stone needs a look."
