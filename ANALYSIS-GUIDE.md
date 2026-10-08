@@ -40,24 +40,38 @@ We can run both at once without them stepping on each other.
 
 ## 2. Everything Still Running?
 
-Before any matrix, confirm all five loggers are running and their DBs are growing.
+Before any matrix, confirm all five loggers are up and actually logging. The
+one-command check is the health tool:
 
 ```bash
-for h in stone-fb stone-rfv stone-hrv stone-chill stone-spare; do
-  echo "== $h =="
-  ssh abraxas3d@$h 'pgrep -af station.py | head -1; ls -la mesh_pdr_*.sqlite*'
-done
+./fleet-health.sh
 ```
 
-Each host should print one `station.py` process line and then
-`mesh_pdr_<NAME>.sqlite` + `-shm` + `-wal`, with the `-wal` timestamp recent.
-It grows as packets arrive. 
+Healthy fleet = every row **LOGGER active, WATCHDOG active, CLOCK sync**, and a
+small **DB_AGE** (seconds since that stone last wrote its database). Anything
+flagged — `*inactive` logger, `NOSYNC` clock, `DB_AGE` with `(!)`, or
+`UNREACHABLE` — is the stone to look at.
 
-- No `station.py` line means the agent isn't running. Start it in Section 6.
-- `-wal` timestamp stale or not moving means logger is up but hearing nothing.
-  This might be the radio config, with the region wrong or preset wrong. See Section 5.
-- Use `pgrep -af station.py`, and not bare `ps` because a detached `nohup` process
-  won't show in a plain `ps`. Learned this the hard way. 
+To dig into one stone:
+
+```bash
+ssh abraxas3d@stone-<name>.local 'systemctl status sending-stones --no-pager'
+ssh abraxas3d@stone-<name>.local 'journalctl -u sending-stones -f'   # watch it live
+```
+
+- **Logger not `active`?** Start it: `sudo systemctl start sending-stones`
+  (Section 6). Do NOT launch it by hand with `nohup` — it's a systemd service
+  now, and a hand-started copy would fight the service over the serial port.
+- **DB_AGE large / `(!)`** (service claims active but isn't writing)? The radios
+  may be deaf — wrong region or wrong preset. See Section 5.
+- **`UNREACHABLE`?** The stone is off the network (or a slow name path). It keeps
+  logging to its local SD regardless; reach it over `.local` or reconnect it.
+
+> The logger is a **systemd service** (`sending-stones`) — it auto-starts on boot
+> and auto-restarts on crash. That's the fix for the thing that bit us hard: the
+> old hand-started `nohup` logger silently died on a reboot and nobody noticed for
+> ~22 hours. **Manage it with `systemctl start/stop`, never `pkill`** — systemd
+> respawns a killed process in 5 seconds.
 
 ---
 
