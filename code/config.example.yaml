@@ -1,41 +1,51 @@
 # sending-stones station configuration — copy to config.yaml and edit per station.
-# One golden image everywhere; this file is the only per-station difference.
+# One golden image everywhere; normally only station_id and slot differ per station.
 
-station_id: HRV          # FB | RFV | HRV | CHILL | COLD | SPARE
-slot: 2                  # 0-4; station transmits in seconds [12*slot, 12*slot+12) of each minute
-slot_width_s: 12
+station_id: HRV          # FB | RFV | HRV | CHILL | COLD | SPARE   (set per station)
+
+# --- TX slot timing (Rev D) ------------------------------------------------
+slot: 2                  # unique per station, 0..n_slots-1
+                         #   FB=0  RFV=1  HRV=2  CHILL=3  COLD=4  SPARE=5
+n_slots: 6               # REQUIRED. Number of TX slots the minute is divided into.
+                         # Must be >= (highest slot + 1) and IDENTICAL on every station.
+                         # The per-slot offset is DERIVED, so it can never overflow the minute:
+                         #   slot_gap = (minute_period_s - jitter_max_s) / n_slots
+                         #   t_probe  = minute_start + slot * slot_gap + U(0, jitter_max_s)
+                         # (The old slot_width_s key is gone — Rev D no longer uses it.)
 minute_period_s: 60
 
 cohorts:
   A:
-    preset: LongFast
-    serial: /dev/serial/by-id/CHANGE_ME_A   # stable by-id paths, not ttyUSBn (enumeration order lies)
+    preset: LongFast     # 250 kHz / SF11
+    # by-path, NOT by-id: the CP2102 radios all report serial "0001", so by-id is
+    # ambiguous. by-path is stable per physical USB port — so these are identical
+    # on every station as long as the radios go in the same two ports.
+    serial: /dev/serial/by-path/platform-fd500000.pcie-pci-0000:01:00.0-usb-0:1.3:1.0-port0
   B:
-    preset: ShortTurbo
-    serial: /dev/serial/by-id/CHANGE_ME_B
+    preset: ShortTurbo   # 500 kHz / SF7   (for the bandwidth trial, set B to 500 kHz / SF11 explicitly)
+    serial: /dev/serial/by-path/platform-fd500000.pcie-pci-0000:01:00.0-usb-0:1.4:1.0-port0
 
-tx_enabled: true          # all stations transmit in Rev B; set false to run RX-only
-jitter_max_s: 3.0         # uniform jitter within slot; breaks phase-lock with ambient beacons
+tx_enabled: true          # all stations transmit; set false for a passive RX-only monitor
+jitter_max_s: 3.0         # uniform jitter within the slot; keep < slot_gap so slots don't bleed
 
 payload:
   short_len: 20
   long_len: 180           # alternate by seq parity
 
 capture_trials:           # H5 — scheduled deliberate collisions, rotating pairs
-  enabled: true
-  roster: [FB, RFV, HRV, CHILL, TBD]   # all stations; MUST be identical in every station's config
+  enabled: false          # <-- CONFIRM: off for bench/bandwidth work; on for H5 capture runs
+  roster: [FB, RFV, HRV, CHILL, SPARE]   # <-- CONFIRM roster; MUST be identical in every station's config
   every_min: 10           # a trial fires when epoch_minute % every_min == 0
   cohort_alternate: true  # cohort A/B alternates by global trial index
   # Pair selection is derived from the clock alone — no coordination traffic:
   #   trial_index = epoch_minute // every_min
   #   pair = sorted-combinations(roster)[trial_index % C(n,2)]
-  # Full rotation of all 10 pairs every 100 min (~14 rotations/con-day).
   threeway:               # stretch goal: threshold-vs-interference-sum probing
-    enabled: false        # default OFF until pairwise curve looks healthy (Phase 2)
+    enabled: false        # default OFF until the pairwise curve looks healthy (Phase 2)
     every_nth_trial: 7    # when enabled, every 7th trial uses a triple instead
 
 census_period_s: 600
 util_period_s: 60
 
-db_path: /data/mesh_pdr_{station_id}.sqlite
+db_path: /home/abraxas3d/mesh_pdr_{station_id}.sqlite   # matches deployed path (was /data/...)
 log_level: INFO
