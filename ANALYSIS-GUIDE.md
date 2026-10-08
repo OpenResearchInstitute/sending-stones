@@ -172,7 +172,15 @@ file. Leanred the hard way!
 
 ---
 
-## 7. Glossary
+## 7. Shutting Everything Down Safely
+
+`for s in stone-fb stone-rfv stone-hrv stone-chill stone-spare; do
+  echo "== $s =="; ssh abraxas3d@$s 'sudo shutdown -h now'
+done`
+
+---
+
+## 8. Glossary
 
 - **PDR** — Packet Delivery Ratio: of the probes a sender put on the air, the
   fraction a given receiver logged.
