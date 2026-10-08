@@ -115,10 +115,34 @@ and not before.
 
 ## 6. Operating the fleet safely
 
-**Start / restart a station's logger** (on the Pi):
+Each Stone runs `station.py` as a **systemd service** called `sending-stones`.
+It starts automatically on boot and restarts within 5 seconds if it ever exits,
+so a reboot or a crash no longer silently stops data collection. It has **no
+network dependency** on purpose. A Stone keeps logging to its local SD card
+even when it is off the network.
+
+### Day-to-day control
+
+systemd owns the logger now so **do not `pkill` station.py**, or it will respawn
+in 5 seconds. Use systemctl:
+
+| Task | Command |
+|---|---|
+| Stop the logger (e.g. to free the serial ports for `meshtastic` config) | `sudo systemctl stop sending-stones` |
+| Start it again | `sudo systemctl start sending-stones` |
+| Is it running? | `systemctl is-active sending-stones` |
+| Full status | `systemctl status sending-stones` |
+| Watch it live! | `journalctl -u sending-stones -f` |
+
+A manual `stop` does work. `Restart=always` only respawns on an *unexpected*
+exit, not when you deliberately stop it. It will still auto-start on the next
+reboot. For longer maintenance or when you don't want that, also
+`sudo systemctl disable sending-stones` (and `enable` when done).
+
+Install (or re-install) the service:
 
 ```bash
-nohup python3 -u station.py --config config.yaml > ~/station-$(date -u +%Y%m%d).log 2>&1 &
+sudo ./install-resilience.sh
 ```
 
 `station.py` is restart-safe: it resumes each cohort's seq counter from the DB,
