@@ -43,7 +43,7 @@ usb_sill = 5;
 // ------------------------------------
 
 // the base layer
-//cube([base_width, base_depth , base_height], center = true);
+cube([base_width, base_depth , base_height], center = true);
 
 // X728
 translate([0, -base_depth/6, base_height/2 + x728_height/2])
